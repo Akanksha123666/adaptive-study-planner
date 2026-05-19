@@ -1,2 +1,29 @@
-# adaptive-study-planner
-An AI-powered web application that creates personalized study schedules based on user goals, learning pace, and subject priorities. It helps students manage time efficiently with smart task recommendations, progress tracking, and adaptive learning strategies.
+# Adaptive Study Planner
+
+An AI-powered study planning application that helps students create personalized study schedules, manage tasks, and improve productivity efficiently.
+
+## 🚀 Features
+
+- Personalized study timetable generation
+- Task and goal management
+- AI-based study recommendations
+- Progress tracking dashboard
+- FastAPI backend support
+- Simple and clean project structure
+
+## 🛠️ Tech Stack
+
+- Python
+- FastAPI
+- Pydantic
+- Uvicorn
+
+## 📂 Project Structure
+
+```bash
+adaptive-study-planner/
+│── main.py
+│── cli.py
+│── requirements.txt
+│── README.md
+│── venv/
