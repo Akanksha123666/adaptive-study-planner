@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Study Planner Dashboard</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #8b5cf6;
+            --bg-color: #f8fafc;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+        .btn-primary {
+            background-color: var(--primary-color);
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
+        }
+        .progress-bar-fill {
+            transition: width 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="app" class="max-w-7xl mx-auto">
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-6">Adaptive Study Dashboard</h1>
+        
+        <!-- User Info and Progress Overview -->
+        <div class="card mb-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Authenticated User ID (Simulated)</p>
+                    <p id="user-id" class="text-xl font-mono text-gray-800 break-all"></p>
+                </div>
+                <div class="mt-4 md:mt-0 w-full md:w-1/3">
+                    <p class="text-lg font-semibold text-gray-700 mb-2">Overall Progress</p>
+                    <div class="w-full bg-gray-200 rounded-full h-3.5">
+                        <div id="progress-fill" class="progress-bar-fill h-3.5 rounded-full" style="width: 0%; background-color: var(--secondary-color);"></div>
+                    </div>
+                    <p id="progress-text" class="text-sm text-gray-600 mt-1 text-right">0/0 Topics Mastered</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area: Plan & Quiz -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Daily Study Plan Card -->
+            <div class="lg:col-span-1 card h-full flex flex-col">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Daily Study Plan
+                </h2>
+                <div id="plan-container" class="space-y-4 flex-grow">
+                    <!-- Plan content will be dynamically loaded here -->
+                    <p class="text-gray-500" id="plan-message">Generating your personalized plan...</p>
+                </div>
+                <button onclick="loadDailyPlan()" id="refresh-plan-btn" class="mt-6 w-full btn-primary text-white py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition duration-200">
+                    Refresh Plan
+                </button>
+            </div>
+
+            <!-- Quiz Generation & Taking Panel -->
+            <div class="lg:col-span-2 card">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    Adaptive Quiz Generator
+                </h2>
+                <div id="quiz-panel">
+                    <div id="quiz-message" class="text-center p-6 bg-indigo-50 rounded-lg">
+                        <p class="text-lg font-medium text-indigo-700">Ready for your next challenge!</p>
+                        <p id="next-difficulty-text" class="text-sm text-indigo-500 mt-1"></p>
+                    </div>
+                    <div id="quiz-content" class="mt-4 hidden space-y-4">
+                        <p class="text-lg font-bold" id="quiz-topic"></p>
+                        <div id="questions-container" class="space-y-4">
+                            <!-- Questions loaded here -->
+                        </div>
+                        <button onclick="submitQuiz()" class="w-full btn-primary text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl mt-4">
+                            Submit Quiz & Update Progress
+                        </button>
+                    </div>
+                    <button onclick="loadNewQuiz()" id="generate-quiz-btn" class="w-full btn-primary text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl mt-6">
+                        Generate New Quiz
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- API Status/Error Message Box -->
+        <div id="status-message" class="fixed bottom-4 right-4 p-4 text-sm rounded-lg shadow-lg hidden"></div>
+
+    </div>
+
+    <script type="text/javascript">
+        // ====================================================================
+        // FIREBASE/AUTH/APP_ID SETUP (Simulated for this standalone HTML file)
+        // In a real environment, these would be provided by Canvas.
+        // For this demo, we use a fixed user ID and no external Firebase imports.
+        // ====================================================================
+
+        const USER_ID = 'user-' + Math.random().toString(36).substring(2, 8);
+        document.getElementById('user-id').textContent = USER_ID;
+
+        // ====================================================================
+        // MOCK DATA & AI LOGIC SIMULATION
+        // This logic simulates the AI backend response.
+        // ====================================================================
+        
+        const TOPICS = [
+            { id: 'alg', name: 'Advanced Algebra', prerequisites: [] },
+            { id: 'phy', name: 'Classical Physics', prerequisites: ['alg'] },
+            { id: 'hist', name: 'World History: WW2', prerequisites: [] },
+            { id: 'chem', name: 'Organic Chemistry', prerequisites: ['phy'] },
+            { id: 'comp', name: 'Computer Science: Algorithms', prerequisites: ['alg'] }
+        ];
+
+        const QUIZ_BANK = {
+            'alg': [
+                { q: "What is the result of $2x + 3 = 7$?", a: "x = 2" },
+                { q: "Solve the quadratic equation $x^2 - 4x + 4 = 0$.", a: "x = 2" }
+            ],
+            'phy': [
+                { q: "State Newton's First Law of Motion.", a: "An object in motion stays in motion..." },
+                { q: "What is the formula for kinetic energy?", a: "KE = 1/2 $mv^2$" }
+            ],
+            'hist': [
+                { q: "Which year did WWII begin?", a: "1939" },
+                { q: "Who was the Prime Minister of the UK during the Battle of Britain?", a: "Winston Churchill" }
+            ],
+            'chem': [
+                { q: "What is a hydrocarbon?", a: "A compound made of hydrogen and carbon atoms." },
+                { q: "What is the formula for ethanol?", a: "$C_2H_5OH$" }
+            ],
+            'comp': [
+                { q: "What is Big O notation used for?", a: "To describe algorithm efficiency." },
+                { q: "Define a recursive function.", a: "A function that calls itself." }
+            ]
+        };
+
+        const localStorageKey = study_app_data_${USER_ID};
+
+        // Initial Data Structure
+        let userData = {
+            completedTopics: [], // Array of topic IDs that are mastered
+            performanceHistory: [], // [{ topicId: 'alg', difficulty: 'Medium', score: 80, timestamp: ... }]
+            nextQuizDifficulty: 'Easy' // Adaptive Difficulty
+        };
+
+        // ====================================================================
+        // Utility & Persistence Functions
+        // ====================================================================
+
+        /** Loads data from localStorage or initializes it. */
+        function loadUserData() {
+            try {
+                const storedData = localStorage.getItem(localStorageKey);
+                if (storedData) {
+                    userData = JSON.parse(storedData);
+                }
+            } catch (error) {
+                console.error("Error loading user data:", error);
+            }
+        }
+
+        /** Saves current userData to localStorage. */
+        function saveUserData() {
+            localStorage.setItem(localStorageKey, JSON.stringify(userData));
+        }
+
+        /** Simple helper to simulate API latency. */
+        function simulateApiCall(data) {
+            return new Promise(resolve => {
+                setTimeout(() => resolve({ data: data }), 500);
+            });
+        }
+
+        /** Displays a status message (simulating API response/error feedback) */
+        function showStatus(message, type = 'info') {
+            const statusBox = document.getElementById('status-message');
+            statusBox.textContent = message;
+            statusBox.className = 'fixed bottom-4 right-4 p-4 text-sm rounded-lg shadow-lg';
+            if (type === 'success') {
+                statusBox.classList.add('bg-green-500', 'text-white');
+            } else if (type === 'error') {
+                statusBox.classList.add('bg-red-500', 'text-white');
+            } else { // info
+                statusBox.classList.add('bg-blue-500', 'text-white');
+            }
+            statusBox.style.display = 'block';
+            setTimeout(() => {
+                statusBox.style.display = 'none';
+            }, 3000);
+        }
+
+        // ====================================================================
+        // API Simulation: Progress Tracking
+        // ====================================================================
+
+        /** Updates the dashboard with current progress stats. */
+        function updateProgressDashboard() {
+            const completedCount = userData.completedTopics.length;
+            const totalCount = TOPICS.length;
+            const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+            document.getElementById('progress-fill').style.width = ${percentage}%;
+            document.getElementById('progress-text').textContent = ${completedCount}/${totalCount} Topics Mastered (${percentage}%);
+
+            // Update next difficulty text
+            document.getElementById('next-difficulty-text').textContent = 
+                Your next quiz will start at: ${userData.nextQuizDifficulty} difficulty.;
+        }
+
+        /**
+         * API: Updates user progress based on quiz results.
+         * @param {string} topicId - The topic of the quiz.
+         * @param {string} difficulty - The difficulty level.
+         * @param {number} score - The percentage score (0-100).
+         */
+        async function updateProgress(topicId, difficulty, score) {
+            console.log(API: Updating progress for ${topicId} with score ${score}%);
+            
+            // 1. Update performance history
+            userData.performanceHistory.push({
+                topicId,
+                difficulty,
+                score,
+                timestamp: Date.now()
+            });
+
+            // 2. AI Logic: Check for topic mastery (e.g., score > 75%)
+            if (score >= 75 && !userData.completedTopics.includes(topicId)) {
+                userData.completedTopics.push(topicId);
+                showStatus(Congratulations! You mastered ${topicId.toUpperCase()}!, 'success');
+            }
+
+            // 3. AI Logic: Adaptive Difficulty Update
+            let newDifficulty = userData.nextQuizDifficulty;
+            if (score > 85) {
+                newDifficulty = difficulty === 'Easy' ? 'Medium' : (difficulty === 'Medium' ? 'Hard' : 'Hard');
+            } else if (score < 50) {
+                newDifficulty = difficulty === 'Hard' ? 'Medium' : 'Easy';
+            } else {
+                newDifficulty = difficulty; // Stay the same
+            }
+            userData.nextQuizDifficulty = newDifficulty;
+            
+            saveUserData();
+            updateProgressDashboard();
+            return simulateApiCall({ success: true, newDifficulty: newDifficulty });
+        }
+
+
+        // ====================================================================
+        // API Simulation: Plan Generation
+        // ====================================================================
+
+        /** AI Logic: Generates a personalized daily study plan. */
+        async function getPlan() {
+            const uncompletedTopics = TOPICS.filter(t => !userData.completedTopics.includes(t.id));
+
+            let planItems = [];
+            let priorityTopic = null;
+
+            // Priority 1: Find a topic whose prerequisites are completed but the topic itself is not
+            for (const topic of uncompletedTopics) {
+                const prereqsMet = topic.prerequisites.every(p => userData.completedTopics.includes(p));
+                if (prereqsMet) {
+                    priorityTopic = topic;
+                    break;
+                }
+            }
+
+            if (priorityTopic) {
+                planItems.push(Focus on **${priorityTopic.name}** today. You have met the prerequisites.);
+                planItems.push(Goal: Achieve a score of >75% on the ${priorityTopic.id.toUpperCase()} Quiz.);
+            } else if (uncompletedTopics.length > 0) {
+                 // Priority 2: Pick a random, uncompleted topic
+                const randomIndex = Math.floor(Math.random() * uncompletedTopics.length);
+                const randomTopic = uncompletedTopics[randomIndex];
+                planItems.push(Review **${randomTopic.name}**. You are ready for this topic.);
+                planItems.push(Goal: Read Chapter 3 materials.);
+            } else {
+                planItems.push("Congratulations! All core topics mastered. Focus on advanced review.");
+                planItems.push("Goal: Explore supplementary material or take a Hard difficulty quiz.");
+            }
+
+            // Always add a suggestion to take a quiz
+            planItems.push(**Action Item:** Take an adaptive quiz on any topic.);
+
+            return simulateApiCall({ plan: planItems });
+        }
+
+        /** Front-end function to load and display the plan. */
+        async function loadDailyPlan() {
+            const container = document.getElementById('plan-container');
+            const message = document.getElementById('plan-message');
+            const button = document.getElementById('refresh-plan-btn');
+
+            // Defensive check to prevent TypeError if elements are not found
+            if (!container || !message || !button) {
+                console.error("Required plan elements not found in the DOM.");
+                return;
+            }
+            
+            button.disabled = true;
+            message.textContent = 'Generating plan...';
+            
+            try {
+                const response = await getPlan();
+                container.innerHTML = `
+                    <p class="text-sm font-semibold text-indigo-600 border-b pb-2 mb-2">Based on your progress and prerequisites:</p>
+                    <ul class="list-disc ml-5 space-y-2 text-gray-700">
+                        ${response.data.plan.map(item => <li class="leading-relaxed">${item}</li>).join('')}
+                    </ul>
+                `;
+            } catch (error) {
+                container.innerHTML = '<p class="text-red-500">Error retrieving plan.</p>';
+                console.error("Plan retrieval error:", error);
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        // ====================================================================
+        // API Simulation: Quiz Generation
+        // ====================================================================
+        
+        /** AI Logic: Generates an adaptive quiz. */
+        async function getQuiz(difficulty) {
+            const uncompletedTopics = TOPICS.filter(t => !userData.completedTopics.includes(t.id));
+            let topicToQuiz = null;
+
+            if (uncompletedTopics.length > 0) {
+                // Pick a random uncompleted topic
+                const randomIndex = Math.floor(Math.random() * uncompletedTopics.length);
+                topicToQuiz = uncompletedTopics[randomIndex];
+            } else {
+                // If all completed, pick a random topic for review
+                const randomIndex = Math.floor(Math.random() * TOPICS.length);
+                topicToQuiz = TOPICS[randomIndex];
+            }
+
+            const bank = QUIZ_BANK[topicToQuiz.id];
+            
+            // Simple complexity simulation: Hard quizzes get all questions, Easy/Medium get fewer.
+            let numQuestions;
+            if (difficulty === 'Hard') {
+                numQuestions = bank.length;
+            } else if (difficulty === 'Medium') {
+                numQuestions = Math.min(bank.length, 3);
+            } else { // Easy
+                numQuestions = Math.min(bank.length, 2);
+            }
+
+            // Shuffle and slice
+            const shuffled = bank.sort(() => 0.5 - Math.random());
+            const questions = shuffled.slice(0, numQuestions).map(q => ({
+                question: q.q,
+                answer: q.a, // The expected answer (hidden from user)
+                userAnswer: ''
+            }));
+
+            const quizData = {
+                topicId: topicToQuiz.id,
+                topicName: topicToQuiz.name,
+                difficulty: difficulty,
+                questions: questions
+            };
+
+            return simulateApiCall({ quiz: quizData });
+        }
+
+        /** Front-end state for the current quiz */
+        let currentQuiz = null;
+
+        /** Front-end function to load a new quiz. */
+        async function loadNewQuiz() {
+            const quizPanel = document.getElementById('quiz-panel');
+            const messageDiv = document.getElementById('quiz-message');
+            const contentDiv = document.getElementById('quiz-content');
+            const generateBtn = document.getElementById('generate-quiz-btn');
+            const questionsContainer = document.getElementById('questions-container');
+
+            generateBtn.disabled = true;
+            messageDiv.innerHTML = '<p class="text-lg font-medium text-indigo-700">Generating quiz...</p>';
+            contentDiv.classList.add('hidden');
+
+            try {
+                const difficulty = userData.nextQuizDifficulty;
+                const response = await getQuiz(difficulty);
+                currentQuiz = response.data.quiz;
+
+                document.getElementById('quiz-topic').textContent = Topic: ${currentQuiz.topicName} (${currentQuiz.difficulty});
+                
+                questionsContainer.innerHTML = currentQuiz.questions.map((item, index) => `
+                    <div class="p-4 border rounded-lg bg-gray-50">
+                        <p class="font-medium text-gray-800 mb-2">Q${index + 1}: ${item.question}</p>
+                        <input type="text" id="answer-${index}" placeholder="Your answer here..." 
+                               class="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
+                    </div>
+                `).join('');
+
+                contentDiv.classList.remove('hidden');
+                messageDiv.classList.add('hidden');
+            } catch (error) {
+                showStatus('Error generating quiz.', 'error');
+                messageDiv.innerHTML = '<p class="text-lg font-medium text-red-700">Error generating quiz. Please try again.</p>';
+                messageDiv.classList.remove('hidden');
+                console.error("Quiz generation error:", error);
+            } finally {
+                generateBtn.disabled = false;
+            }
+        }
+
+        /** Front-end function to submit the quiz. */
+        async function submitQuiz() {
+            if (!currentQuiz) {
+                return showStatus("No quiz loaded.", 'error');
+            }
+
+            const answers = currentQuiz.questions.map((q, index) => {
+                const input = document.getElementById(answer-${index});
+                return { 
+                    expected: q.answer.toLowerCase().trim().replace(/[^a-z0-9]/g, ''), 
+                    user: input.value.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
+                };
+            });
+
+            let correctCount = 0;
+            answers.forEach(a => {
+                // Simple strict matching for this demo
+                if (a.user === a.expected) {
+                    correctCount++;
+                }
+            });
+
+            const totalQuestions = currentQuiz.questions.length;
+            const scorePercentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+
+            // Submit score to the simulated API
+            await updateProgress(currentQuiz.topicId, currentQuiz.difficulty, scorePercentage);
+
+            // Display results
+            document.getElementById('quiz-content').classList.add('hidden');
+            document.getElementById('quiz-message').classList.remove('hidden');
+            document.getElementById('quiz-message').innerHTML = `
+                <p class="text-2xl font-bold text-gray-800">Quiz Submitted!</p>
+                <p class="text-4xl my-3 font-extrabold ${scorePercentage >= 75 ? 'text-green-600' : 'text-red-600'}">${scorePercentage}%</p>
+                <p class="text-lg font-medium text-gray-700 mt-2">${correctCount} out of ${totalQuestions} correct.</p>
+                <p class="text-md text-indigo-500 mt-2">Your performance updated the adaptive difficulty!</p>
+            `;
+            
+            currentQuiz = null; // Clear quiz state
+            // Next loadNewQuiz will use the updated userData.nextQuizDifficulty
+        }
+
+        // ====================================================================
+        // Initialization
+        // ====================================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserData();
+            updateProgressDashboard();
+            loadDailyPlan(); // Load initial plan
+        });
+    </script>
+</body>
+</html>
